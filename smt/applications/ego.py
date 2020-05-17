@@ -100,7 +100,7 @@ class EGO(SurrogateBasedApplication):
         declare("xlimits", None, types=np.ndarray, desc="Bounds of function fun inputs")
         declare("verbose", False, types=bool, desc="Print computation information")
 
-    def optimize(self, fun):
+    def optimize(self, fun, out_path=''):
         """
         Optimizes fun
 
@@ -172,6 +172,11 @@ class EGO(SurrogateBasedApplication):
                 # Update y_data with predicted value
                 y_data = np.atleast_2d(np.append(y_data, y_et_k)).T
                 x_data = np.atleast_2d(np.append(x_data, x_et_k, axis=0))
+                
+                #save data to file
+                np.save(out_path+'x_data',x_data)
+                np.save(out_path+'y_data',y_data)
+                np.save(out_path+'xlimits',xlimits)
 
             # Compute the real values of y_data
             x_to_compute = np.atleast_2d(x_data[-n_parallel:])
