@@ -97,6 +97,7 @@ class EGO(SurrogateBasedApplication):
         )
         declare("xdoe", None, types=np.ndarray, desc="Initial doe inputs")
         declare("ydoe", None, types=np.ndarray, desc="Initial doe outputs")
+        declare("eidoe", None, types=np.ndarray, desc="Initial doe EI")
         declare("xlimits", None, types=np.ndarray, desc="Bounds of function fun inputs")
         declare("verbose", False, types=bool, desc="Print computation information")
 
@@ -141,10 +142,16 @@ class EGO(SurrogateBasedApplication):
             y_doe = self._evaluator.run(fun, x_doe)
         else:  # to save time if y_doe is already given to EGO
             y_doe = ydoe
+        
+        if eidoe is None:
+            ei_data = np.zeros_like(y_doe)
+        else:
+            ei_data = eidoe
 
         # to save the initial doe
         x_data = x_doe
         y_data = y_doe
+        
 
         self.gpr = KRG(print_global=False)
 
@@ -154,7 +161,7 @@ class EGO(SurrogateBasedApplication):
         for k in range(n_iter):
             # Virtual enrichement loop
             for p in range(n_parallel):
-                x_et_k, success = self._find_points(x_data, y_data)
+                x_et_k, success, crit_opt = self._find_points(x_data, y_data)
                 if not success:
                     self.log(
                         "Internal optimization failed at EGO iter = {}.{}".format(k, p)
@@ -172,16 +179,19 @@ class EGO(SurrogateBasedApplication):
                 # Update y_data with predicted value
                 y_data = np.atleast_2d(np.append(y_data, y_et_k)).T
                 x_data = np.atleast_2d(np.append(x_data, x_et_k, axis=0))
-                
-                #save data to file
-                np.save(out_path+'x_data',x_data)
-                np.save(out_path+'y_data',y_data)
-                np.save(out_path+'xlimits',xlimits)
+                ei_data = np.atleast_2d(np.append(ei_data, crit_opt)).T
+
 
             # Compute the real values of y_data
             x_to_compute = np.atleast_2d(x_data[-n_parallel:])
             y = self._evaluator.run(fun, x_to_compute)
             y_data[-n_parallel:] = y
+            
+            #save data to file
+            np.save(out_path+'x_data',x_data)
+            np.save(out_path+'y_data',y_data)
+            np.save(out_path+'xlimits',xlimits)
+            np.save(out_path+'ei_data',ei_data)
 
         # Find the optimal point
         ind_best = np.argmin(y_data)
@@ -280,7 +290,7 @@ class EGO(SurrogateBasedApplication):
         ind_min = np.argmin(obj_success)
         opt = opt_success[ind_min]
         x_et_k = np.atleast_2d(opt["x"])
-        return x_et_k, True
+        return x_et_k, True, opt.fun
 
     def set_virtual_point(self, x, y_data):
         qEI = self.options["qEI"]
