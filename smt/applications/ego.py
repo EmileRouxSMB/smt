@@ -27,6 +27,9 @@ class Evaluator(object):
     An interface for evaluation of a function at x points (nsamples of dimension nx).
     User can derive this interface and override the run() method to implement custom multiprocessing.
     """
+    def __init__(self, id_simu=0):
+        self.id_simu=id_simu
+
 
     def run(self, fun, x):
         """
@@ -45,7 +48,9 @@ class Evaluator(object):
             fun evaluations at the nsamples points.
 
         """
-        return fun(x)
+        rep = fun(x,self.id_simu)
+        self.id_simu += 1
+        return rep
 
 
 class EGO(SurrogateBasedApplication):
@@ -142,13 +147,14 @@ class EGO(SurrogateBasedApplication):
             y_doe = self._evaluator.run(fun, x_doe)
         else:  # to save time if y_doe is already given to EGO
             y_doe = ydoe
+            self._evaluator.id_simu = len(y_doe)
         
         eidoe = self.options["eidoe"]
         if eidoe is None:
             ei_data = np.zeros_like(y_doe)
         else:
             ei_data = eidoe
-
+        
         # to save the initial doe
         x_data = x_doe
         y_data = y_doe
