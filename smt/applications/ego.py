@@ -143,6 +143,7 @@ class EGO(SurrogateBasedApplication):
         else:  # to save time if y_doe is already given to EGO
             y_doe = ydoe
         
+        eidoe = self.options["eidoe"]
         if eidoe is None:
             ei_data = np.zeros_like(y_doe)
         else:
